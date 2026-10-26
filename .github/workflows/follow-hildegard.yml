@@ -1,0 +1,53 @@
+# Keeps this plugin on Hildegard's newest release. Each release of baney75/hildegard carries the plugin, built from
+# its omarchy/ folder with that release's own installer, as hildegard-omarchy-<version>.tar.gz. This unpacks it over
+# the repo once its SHA-256 matches the release's SHA256SUMS, commits "Hildegard <version>" and tags it v<version>.
+# It never moves to an older version.
+name: Follow Hildegard
+
+on:
+  schedule:
+    - cron: '41 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: follow-hildegard
+  cancel-in-progress: false
+
+jobs:
+  follow:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Take the newest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=$(gh api repos/baney75/hildegard/releases/latest --jq .tag_name)
+          version=${tag#v}
+          [[ $version =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "Not a version: $tag"; exit 1; }
+          have=$(jq -r .version manifest.json)
+          if [[ $version == "$have" ]]; then echo "Already on $version."; exit 0; fi
+          if [[ $(printf '%s\n%s\n' "$have" "$version" | sort -V | tail -n 1) != "$version" ]]; then
+            echo "Hildegard's latest, $version, is older than this plugin's $have; leaving it."
+            exit 0
+          fi
+          asset=hildegard-omarchy-$version.tar.gz
+          dl=$(mktemp -d)
+          if ! gh release download "$tag" --repo baney75/hildegard --pattern "$asset" --pattern SHA256SUMS --dir "$dl"; then
+            echo "$tag carries no $asset; waiting for a release that does."
+            exit 0
+          fi
+          (cd "$dl" && grep -E "^[0-9a-f]{64}  $asset\$" SHA256SUMS | sha256sum -c -)
+          find . -mindepth 1 -maxdepth 1 ! -name .git ! -name .github -exec rm -rf {} +
+          tar -xzf "$dl/$asset" --strip-components 1 --no-same-owner
+          test "$(jq -r .version manifest.json)" = "$version"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -q -m "Hildegard $version" -m "Built from baney75/hildegard $tag: $(sha256sum "$dl/$asset" | cut -d' ' -f1)  $asset"
+          git tag "v$version"
+          git push origin HEAD "v$version"
