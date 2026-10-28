@@ -1,13 +1,13 @@
 #!/bin/sh
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Installs Hildegard 0.1.10 for you alone: no sudo, nothing outside your home folder.
+# Installs Hildegard 0.1.12 for you alone: no sudo, nothing outside your home folder.
 #
-#   curl -fsSL https://github.com/baney75/hildegard/releases/download/v0.1.10/install.sh | sh
+#   curl -fsSL https://github.com/baney75/hildegard/releases/download/v0.1.12/install.sh | sh
 #   curl -fsSL .../install.sh | sh -s -- --json         for agents: the last step prints JSON
 #
 # What it does, in order:
-#   1. Downloads Node.js 24.21.0 from nodejs.org and Hildegard 0.1.10 from GitHub, and checks each against the
+#   1. Downloads Node.js 24.21.0 from nodejs.org and Hildegard 0.1.12 from GitHub, and checks each against the
 #      SHA-256 written into this script. A file that doesn't match is refused and nothing is installed.
 #   2. Puts them in ~/.local/share/hildegard (on macOS, ~/Library/Application Support/Hildegard), and a `hildegard`
 #      command in ~/.local/bin.
@@ -17,7 +17,7 @@
 set -eu
 # ASCII only below: macOS's /bin/sh (bash 3.2) reads a UTF-8 byte after $NAME as part of the name.
 
-VERSION=0.1.10
+VERSION=0.1.12
 NODE=24.21.0
 RELEASE=${HILDEGARD_RELEASE_URL:-https://github.com/baney75/hildegard/releases/download/v$VERSION}
 # Where Node.js comes from. Each file is still checked against the SHA-256 written below, wherever it comes from.
@@ -103,10 +103,10 @@ target=$os-$arch
 
 app_sha() {
   case $1 in
-  linux-x64) echo 6ed7503538b58d02996f9ad023ef8007eb5bd6be93c1a52779c3dc0e7c1ba486 ;;
-  linux-arm64) echo 479a22cd61be1cb6838177453a6322f0b580e785b1308fc2334ad0d95da6c680 ;;
-  darwin-x64) echo d20fc29b260f7e388ec7047b5c6ae3f991dde80fb5612f51830b57cfb6c96f95 ;;
-  darwin-arm64) echo d998591e141d7d36c1e15597175ce465b4392960cf54a288364118eb6c3cc18e ;;
+  linux-x64) echo c345b6034b210d758aa51b828acc207ff3fa985edfe0f70a9c6c214afad39486 ;;
+  linux-arm64) echo 3ca0cdaf46d59d0f36d9e713aecf897d7c2075f147819dc47195dda53c9510b4 ;;
+  darwin-x64) echo 3b726e1828a418aa1ee59bde9872ee95132fbd8ca7fbef81b9a9f6d7426c006b ;;
+  darwin-arm64) echo 8f861ae85af21e9b4c836ddec0e861a7ee7c3ca6bd82fd9d351bf5359f4236ea ;;
   esac
 }
 node_sha() {
