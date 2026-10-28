@@ -1,13 +1,13 @@
 #!/bin/sh
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Installs Hildegard 0.1.9 for you alone: no sudo, nothing outside your home folder.
+# Installs Hildegard 0.1.10 for you alone: no sudo, nothing outside your home folder.
 #
-#   curl -fsSL https://github.com/baney75/hildegard/releases/download/v0.1.9/install.sh | sh
+#   curl -fsSL https://github.com/baney75/hildegard/releases/download/v0.1.10/install.sh | sh
 #   curl -fsSL .../install.sh | sh -s -- --json         for agents: the last step prints JSON
 #
 # What it does, in order:
-#   1. Downloads Node.js 24.21.0 from nodejs.org and Hildegard 0.1.9 from GitHub, and checks each against the
+#   1. Downloads Node.js 24.21.0 from nodejs.org and Hildegard 0.1.10 from GitHub, and checks each against the
 #      SHA-256 written into this script. A file that doesn't match is refused and nothing is installed.
 #   2. Puts them in ~/.local/share/hildegard (on macOS, ~/Library/Application Support/Hildegard), and a `hildegard`
 #      command in ~/.local/bin.
@@ -17,15 +17,77 @@
 set -eu
 # ASCII only below: macOS's /bin/sh (bash 3.2) reads a UTF-8 byte after $NAME as part of the name.
 
-VERSION=0.1.9
+VERSION=0.1.10
 NODE=24.21.0
 RELEASE=${HILDEGARD_RELEASE_URL:-https://github.com/baney75/hildegard/releases/download/v$VERSION}
+# Where Node.js comes from. Each file is still checked against the SHA-256 written below, wherever it comes from.
+NODE_DIST=${HILDEGARD_NODE_URL:-https://nodejs.org/dist}
 
 say() { printf '%s\n' "$*" >&2; }
+# When an older Hildegard runs this to update itself, its own paths are in the environment. They name the version being
+# replaced, and the new one must find its files where it is, so drop them; the hildegard command sets what it needs.
+unset HILDEGARD_ENTRY HILDEGARD_RESOURCES HILDEGARD_PRESETS_DIR HILDEGARD_COMMIT
+# What failed, said last (an updating Hildegard shows the last line), after whatever going back did.
+failure=
 die() {
-  say "hildegard: $*"
+  failure=$*
   exit 1
 }
+
+# Until setup finishes, the version this replaces is kept: its app folder, and its Node.js in node.prev. Any failure
+# puts it back and starts it again, so a failed update leaves the old Hildegard as it was.
+tmp=
+home=
+bin=
+prev=
+switched=
+committed=
+setup_failed=
+failed() {
+  set +e
+  [ -n "$committed" ] && return 0
+  committed=1
+  back=
+  if [ -n "$switched" ] && [ -n "$prev" ] && [ -d "$home/$prev" ]; then
+    # Run with sh, so a launcher left without its execute bit still works. Whatever started from the new version stops before the link moves back under it.
+    sh "$bin/hildegard" stop </dev/null >/dev/null 2>&1
+    ln -sfn "$prev" "$home/app" && back=1
+  fi
+  # The old Node.js goes with the old app, or stays when the app never changed; a new app keeps the new Node.js.
+  if [ -n "$home" ] && [ -d "$home/node.prev" ]; then
+    if [ -n "$back" ] || [ -z "$switched" ]; then
+      rm -rf "$home/node"
+      mv "$home/node.prev" "$home/node"
+    else
+      rm -rf "$home/node.prev"
+    fi
+  fi
+  msg=${failure:-the installer stopped (exit $1)}
+  cur=
+  [ -n "$home" ] && cur=$(readlink "$home/app" 2>/dev/null)
+  if [ -n "$back" ]; then
+    say "Going back to Hildegard ${prev#app-}. Hildegard $VERSION stays in $home/app-$VERSION."
+    if sh "$bin/hildegard" start </dev/null >/dev/null 2>&1; then
+      msg="${msg%.}, so ${prev#app-} runs again. To try $VERSION again, run: hildegard update"
+    else
+      msg="${msg%.}, and ${prev#app-} didn't start either. Run: hildegard doctor"
+    fi
+  elif [ -z "$switched" ] && [ -n "$cur" ] && [ "$cur" != "app-$VERSION" ]; then
+    # Nothing was switched or stopped, so the version that was there is as it was.
+    msg="${msg%.}. Hildegard ${cur#app-} is unchanged. To try $VERSION again, run: hildegard update"
+  elif [ -n "$setup_failed" ]; then
+    msg="${msg%.}. Run it again with: hildegard install"
+  fi
+  say "hildegard: $msg"
+  # For an updating Hildegard, which may not see this output: the version that failed, and the line above.
+  if [ -n "${HILDEGARD_UPDATE_REPORT:-}" ]; then
+    printf '%s\nhildegard: %s\n' "$VERSION" "$msg" >"$HILDEGARD_UPDATE_REPORT" 2>/dev/null
+  fi
+}
+rc=0
+# Keep the exit status: an EXIT trap's own status would otherwise hide a failure.
+trap 'rc=$?; [ -z "$tmp" ] || rm -rf "$tmp"; [ "$rc" = 0 ] || failed "$rc"; exit $rc' EXIT
+trap 'exit 130' INT TERM
 
 case "$(uname -s)" in
 Linux) os=linux ;;
@@ -41,10 +103,10 @@ target=$os-$arch
 
 app_sha() {
   case $1 in
-  linux-x64) echo 36207645d11237aae1399607697129e4cd58c70f13514a8cfd30285e08d0cb15 ;;
-  linux-arm64) echo 7ff62b266c725638fb8a2b8fdabc83689503cbd1c8fc6ee3c67a195b8b86251a ;;
-  darwin-x64) echo 6d97eda264a0fc66e45d32794a490bc33ed4c25cda262c0cd25d84e5ce5915dc ;;
-  darwin-arm64) echo 7c3e5353c4c335581954299090a9e29f612fb2056ee390e4c8057774fd54675c ;;
+  linux-x64) echo 6ed7503538b58d02996f9ad023ef8007eb5bd6be93c1a52779c3dc0e7c1ba486 ;;
+  linux-arm64) echo 479a22cd61be1cb6838177453a6322f0b580e785b1308fc2334ad0d95da6c680 ;;
+  darwin-x64) echo d20fc29b260f7e388ec7047b5c6ae3f991dde80fb5612f51830b57cfb6c96f95 ;;
+  darwin-arm64) echo d998591e141d7d36c1e15597175ce465b4392960cf54a288364118eb6c3cc18e ;;
   esac
 }
 node_sha() {
@@ -104,20 +166,17 @@ checked() { # url file sha
 }
 
 tmp=$(mktemp -d)
-# Keep the exit status: an EXIT trap's own status would otherwise hide a failure.
-trap 'rc=$?; rm -rf "$tmp"; exit $rc' EXIT
-trap 'exit 130' INT TERM
 mkdir -p "$home" "$bin"
 
 # Node.js, Hildegard's own copy, so it never depends on (or changes) one you have.
 if [ "$("$home/node/bin/node" --version 2>/dev/null || true)" != "v$NODE" ]; then
   say "Getting Node.js ${NODE}..."
   f=node-v$NODE-$target.tar.gz
-  checked "https://nodejs.org/dist/v$NODE/$f" "$tmp/$f" "$(node_sha "$target")"
-  rm -rf "$home/node.new"
+  checked "$NODE_DIST/v$NODE/$f" "$tmp/$f" "$(node_sha "$target")"
+  rm -rf "$home/node.new" "$home/node.prev"
   mkdir -p "$home/node.new"
   tar -xmzf "$tmp/$f" -C "$home/node.new" --strip-components 1
-  rm -rf "$home/node"
+  [ -d "$home/node" ] && mv "$home/node" "$home/node.prev"
   mv "$home/node.new" "$home/node"
 fi
 
@@ -131,6 +190,7 @@ rm -rf "$home/app-$VERSION"
 mv "$home/app-$VERSION.new" "$home/app-$VERSION"
 # Keep this version and the one before it, for going back.
 prev=$(readlink "$home/app" 2>/dev/null || true)
+[ "$prev" = "app-$VERSION" ] && prev=
 for old in "$home"/app-*; do
   [ -d "$old" ] || continue
   case $(basename "$old") in
@@ -138,16 +198,19 @@ for old in "$home"/app-*; do
   *) rm -rf "$old" ;;
   esac
 done
+switched=1
 ln -sfn "app-$VERSION" "$home/app"
 
-cat >"$bin/hildegard" <<EOF
+# Written beside it and then moved into place, so a full disk can't leave a broken launcher for going back with.
+cat >"$bin/hildegard.new" <<EOF
 #!/bin/sh
 export HILDEGARD_HOME="$home"
 # AI apps get this path, which survives upgrades (app is a link to the current version).
 export HILDEGARD_ENTRY="$home/app/hildegard.mjs"
 exec "$home/node/bin/node" "$home/app/hildegard.mjs" "\$@"
 EOF
-chmod 755 "$bin/hildegard"
+chmod 755 "$bin/hildegard.new"
+mv "$bin/hildegard.new" "$bin/hildegard"
 say "Installed the hildegard command in $bin."
 case ":$PATH:" in
 *":$bin:"*) ;;
@@ -155,5 +218,13 @@ case ":$PATH:" in
 esac
 
 if [ "${HILDEGARD_SKIP_SETUP:-}" != 1 ]; then
-  exec "$bin/hildegard" install --yes "$@"
+  # Setup never prompts (--yes), and under `curl | sh` its stdin would be the rest of this script.
+  "$bin/hildegard" install --yes "$@" </dev/null || {
+    status=$?
+    setup_failed=1
+    failure="setting up $VERSION failed (exit $status)"
+    exit $status
+  }
 fi
+committed=1
+rm -rf "$home/node.prev"
