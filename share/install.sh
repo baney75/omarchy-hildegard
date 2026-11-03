@@ -1,13 +1,16 @@
 #!/bin/sh
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Installs Hildegard 0.1.14 for you alone: no sudo, nothing outside your home folder.
+# Installs Hildegard 0.1.16 for you alone: no sudo, nothing outside your home folder.
 #
-#   curl -fsSL https://github.com/baney75/hildegard/releases/download/v0.1.14/install.sh | sh
+#   curl -fsSL https://github.com/baney75/hildegard/releases/download/v0.1.16/install.sh | sh
 #   curl -fsSL .../install.sh | sh -s -- --json         for agents: the last step prints JSON
+#   curl -fsSL .../install.sh | sh -s -- --server       a computer that serves your other devices: speech and
+#                                                       transcription too, and a service that starts Hildegard when
+#                                                       you sign in (a user systemd unit; on macOS, a LaunchAgent)
 #
 # What it does, in order:
-#   1. Downloads Node.js 24.21.0 from nodejs.org and Hildegard 0.1.14 from GitHub, and checks each against the
+#   1. Downloads Node.js 24.21.0 from nodejs.org and Hildegard 0.1.16 from GitHub, and checks each against the
 #      SHA-256 written into this script. A file that doesn't match is refused and nothing is installed.
 #   2. Puts them in ~/.local/share/hildegard (on macOS, ~/Library/Application Support/Hildegard), and a `hildegard`
 #      command in ~/.local/bin.
@@ -17,7 +20,7 @@
 set -eu
 # ASCII only below: macOS's /bin/sh (bash 3.2) reads a UTF-8 byte after $NAME as part of the name.
 
-VERSION=0.1.14
+VERSION=0.1.16
 NODE=24.21.0
 RELEASE=${HILDEGARD_RELEASE_URL:-https://github.com/baney75/hildegard/releases/download/v$VERSION}
 # Where Node.js comes from. Each file is still checked against the SHA-256 written below, wherever it comes from.
@@ -101,12 +104,18 @@ arm64 | aarch64) arch=arm64 ;;
 esac
 target=$os-$arch
 
+# --server goes on to setup with the rest; this script only needs to know, to say what's next when setup is skipped.
+server=
+for a in "$@"; do
+  case $a in --server) server=1 ;; esac
+done
+
 app_sha() {
   case $1 in
-  linux-x64) echo c8220f3e3ae67046b855d69b02a022f1bb9e5e6d5806d8ddb798dec775c1f881 ;;
-  linux-arm64) echo e7c95b5073835985388091a6a93a009785abdffda6b3a6fd768f008681bfd9d9 ;;
-  darwin-x64) echo e3310437e6ca6e601d26eda5f1ad1729d5573c535f31e3b07f7c37b16321bc9a ;;
-  darwin-arm64) echo 9bca2ce9e3b00adc7cafb3b40e78f5628e3f3be6e5b82e988c1dd09b414b224e ;;
+  linux-x64) echo 3ab6b0f422e25553159b2c9f6e3485be418b5ec98d5bccb4925faaf7d172606c ;;
+  linux-arm64) echo 8844d308ea44eac6e86996d43081bc7fd35e42e11703b2bf17f2d3f4afdef321 ;;
+  darwin-x64) echo f71a404a9f54c6c79604b22bacd77b0e7e45ede9be329dd16f3285312895dfd6 ;;
+  darwin-arm64) echo 3ee7eee5d1d2a2f1412ce9be1e323672f3d6b6a03bf3ba44578519f3aae9005a ;;
   esac
 }
 node_sha() {
@@ -225,6 +234,8 @@ if [ "${HILDEGARD_SKIP_SETUP:-}" != 1 ]; then
     failure="setting up $VERSION failed (exit $status)"
     exit $status
   }
+elif [ -n "$server" ]; then
+  say "To set it up to serve your other devices, run: $bin/hildegard install --yes --server"
 fi
 committed=1
 rm -rf "$home/node.prev"
