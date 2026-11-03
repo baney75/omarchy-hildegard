@@ -1,16 +1,16 @@
 #!/bin/sh
 # SPDX-License-Identifier: AGPL-3.0-only
 #
-# Installs Hildegard 0.1.16 for you alone: no sudo, nothing outside your home folder.
+# Installs Hildegard 0.1.17 for you alone: no sudo, nothing outside your home folder.
 #
-#   curl -fsSL https://github.com/baney75/hildegard/releases/download/v0.1.16/install.sh | sh
+#   curl -fsSL https://github.com/baney75/hildegard/releases/download/v0.1.17/install.sh | sh
 #   curl -fsSL .../install.sh | sh -s -- --json         for agents: the last step prints JSON
 #   curl -fsSL .../install.sh | sh -s -- --server       a computer that serves your other devices: speech and
 #                                                       transcription too, and a service that starts Hildegard when
 #                                                       you sign in (a user systemd unit; on macOS, a LaunchAgent)
 #
 # What it does, in order:
-#   1. Downloads Node.js 24.21.0 from nodejs.org and Hildegard 0.1.16 from GitHub, and checks each against the
+#   1. Downloads Node.js 24.21.0 from nodejs.org and Hildegard 0.1.17 from GitHub, and checks each against the
 #      SHA-256 written into this script. A file that doesn't match is refused and nothing is installed.
 #   2. Puts them in ~/.local/share/hildegard (on macOS, ~/Library/Application Support/Hildegard), and a `hildegard`
 #      command in ~/.local/bin.
@@ -20,7 +20,7 @@
 set -eu
 # ASCII only below: macOS's /bin/sh (bash 3.2) reads a UTF-8 byte after $NAME as part of the name.
 
-VERSION=0.1.16
+VERSION=0.1.17
 NODE=24.21.0
 RELEASE=${HILDEGARD_RELEASE_URL:-https://github.com/baney75/hildegard/releases/download/v$VERSION}
 # Where Node.js comes from. Each file is still checked against the SHA-256 written below, wherever it comes from.
@@ -112,10 +112,10 @@ done
 
 app_sha() {
   case $1 in
-  linux-x64) echo 3ab6b0f422e25553159b2c9f6e3485be418b5ec98d5bccb4925faaf7d172606c ;;
-  linux-arm64) echo 8844d308ea44eac6e86996d43081bc7fd35e42e11703b2bf17f2d3f4afdef321 ;;
-  darwin-x64) echo f71a404a9f54c6c79604b22bacd77b0e7e45ede9be329dd16f3285312895dfd6 ;;
-  darwin-arm64) echo 3ee7eee5d1d2a2f1412ce9be1e323672f3d6b6a03bf3ba44578519f3aae9005a ;;
+  linux-x64) echo 36f98615e80dc9d32e4e0935d4034620e1057b9ee7b34441316679cc32ec45b2 ;;
+  linux-arm64) echo aca82e108ac80d159ee49d03686c20a6d37958c6251a56cfce7c52e799a967e8 ;;
+  darwin-x64) echo 729019fd6218762f4e338f25efd2d2c5035a6db3264b62d139aa95295c189ab0 ;;
+  darwin-arm64) echo 8dde3d15198b3fec5d078e8d7379b79dfa60a7f17a0c1172a77ab176818cea49 ;;
   esac
 }
 node_sha() {
